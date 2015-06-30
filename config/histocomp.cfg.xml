@@ -1,0 +1,30 @@
+<?xml version = "1.0"?>
+<configfile>
+	<imagepool>
+		<poolname value="image-pool-ds" />
+		<description value="Pooling Datasource for Image Database" />
+		<ideltimeout value="650" />
+		<minpool value="2" />
+		<maxpool value="10" />
+		<maxsize value="20" />
+		<username value="root" />
+		<password value="" />
+		<validationquery value="Do 1;" />
+		<driverclass value="com.mysql.jdbc.Driver" />
+		<url value="jdbc:mysql://localhost:3306/image_db" />
+	</imagepool>
+	<trackingpool>
+		<poolname value="tracking-pool-ds" />
+		<description value="Pooling Datasource for Tracking Database" />
+		<ideltimeout value="650" />
+		<minpool value="2" />
+		<maxpool value="10" />
+		<maxsize value="20" />
+		<username value="root" />
+		<password value="" />
+		<validationquery value="Do 1;" />
+		<driverclass value="com.mysql.jdbc.Driver" />
+		<url value="jdbc:mysql://localhost:3306/trackingdata" />
+	</trackingpool>
+	<imagedbcache max="650000" />
+</configfile>
