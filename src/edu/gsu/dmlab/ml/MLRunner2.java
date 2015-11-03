@@ -27,7 +27,7 @@ import edu.gsu.dmlab.datatypes.interfaces.IEvent;
 import edu.gsu.dmlab.datatypes.interfaces.ITrack;
 import edu.gsu.dmlab.imageproc.interfaces.IHistogramProducer;
 
-public class MLRunner {
+public class MLRunner2 {
 
 	int span = 12600;
 	IHistogramProducer histoProducer;
@@ -40,7 +40,7 @@ public class MLRunner {
 	final int CV_ROW_SAMPLE = 1;
 	final int CV_COL_SAMPLE = 0;
 
-	public MLRunner(IHistogramProducer histoProducer, ITrack[][] trackArray,
+	public MLRunner2(IHistogramProducer histoProducer, ITrack[][] trackArray,
 			int[][] dims, int compMethod, boolean dualHist) {
 		if (histoProducer == null)
 			throw new IllegalArgumentException(
@@ -117,8 +117,8 @@ public class MLRunner {
 					double[] retVals = new double[3];
 					int count = 0;
 					for (int j = idx; j < idx2; j++) {
-						CvStatModel model = getModel(labelsArr[j], modelType);
-						double acc = calcModelAccuracy(labelsArr, j, model,
+						CvStatModel model = getModel(labelsArr, j, modelType);
+						double acc = calcModelAccuracy(labelsArr[j], model,
 								modelType);
 						System.out.println("Correct Percentage:" + acc);
 						retVals[count++] = acc;
@@ -186,34 +186,20 @@ public class MLRunner {
 
 	}
 
-	double calcModelAccuracy(Mat[][] labelsArr, int currentFile,
-			CvStatModel model, int modelType) {
+	double calcModelAccuracy(Mat[] labels, CvStatModel model, int modelType) {
 		double count = 0.0;
 		double correct = 0.0;
-		for (int i = 0; i < currentFile; i++) {
-			Mat[] labels = labelsArr[i];
-			for (int y = 0; y < labels[0].rows(); y++) {
-				double predictedClass = this.predict(model, modelType,
-						labels[0].row(y));
-				double actual = labels[1].get(y, 0)[0];
-				if (predictedClass == actual) {
-					correct++;
-				}
-				count++;
+
+		for (int y = 0; y < labels[0].rows(); y++) {
+			double predictedClass = this.predict(model, modelType,
+					labels[0].row(y));
+			double actual = labels[1].get(y, 0)[0];
+			if (predictedClass == actual) {
+				correct++;
 			}
+			count++;
 		}
-		for (int i = currentFile + 1; i < labelsArr.length; i++) {
-			Mat[] labels = labelsArr[i];
-			for (int y = 0; y < labels[0].rows(); y++) {
-				double predictedClass = this.predict(model, modelType,
-						labels[0].row(y));
-				double actual = labels[1].get(y, 0)[0];
-				if (predictedClass == actual) {
-					correct++;
-				}
-				count++;
-			}
-		}
+
 		return correct / count;
 	}
 
@@ -232,18 +218,45 @@ public class MLRunner {
 		}
 	}
 
-	private CvStatModel getModel(Mat[] labels, int modelType) {
+	private CvStatModel getModel(Mat[][] labelsArr, int leavOut, int modelType) {
+		ArrayList<Float> classLabels = new ArrayList<Float>();
+		ArrayList<Mat> dataList = new ArrayList<Mat>();
+
+		for (int i = 0; i < labelsArr.length; i++) {
+			Mat[] labels = labelsArr[i];
+			if (i == leavOut)
+				continue;
+			for (int j = 0; j < labels[0].rows(); j++) {
+				Mat vals = labels[0].row(j);
+				dataList.add(vals);
+				double label = labels[1].get(j, 0)[0];
+				classLabels.add((float) label);
+			}
+		}
+
+		float[] labelArr = new float[classLabels.size()];
+		Mat dataMat = new Mat(dataList.size(), dataList.get(0).rows(),
+				CvType.CV_32F);
+		for (int i = 0; i < labelArr.length; i++) {
+			Mat tmpMat = dataList.get(i);
+			for (int j = 0; j < tmpMat.rows(); j++)
+			dataMat.put(i, j, tmpMat.get(0, j));
+			labelArr[i] = classLabels.get(i);
+		}
+
+		Mat labelMat = new MatOfFloat(labelArr);
+
 		if (modelType == 1) {
 			CvNormalBayesClassifier classifier = new CvNormalBayesClassifier();
-			classifier.train(labels[0], labels[1]);
+			classifier.train(dataMat, labelMat);
 			return classifier;
 		} else if (modelType == 2) {
 			CvSVM classifier = new CvSVM();
-			classifier.train(labels[0], labels[1]);
+			classifier.train(dataMat, labelMat);
 			return classifier;
 		} else if (modelType == 3) {
 			CvBoost classifier = new CvBoost();
-			classifier.train(labels[0], CV_ROW_SAMPLE, labels[1]);
+			classifier.train(dataMat, CV_ROW_SAMPLE, labelMat);
 			return classifier;
 		} else {
 			return null;
