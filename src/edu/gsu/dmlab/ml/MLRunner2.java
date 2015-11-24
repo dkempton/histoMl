@@ -13,6 +13,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -39,6 +40,7 @@ public class MLRunner2 {
 	ITrack[][] trackArray = null;
 	final int CV_ROW_SAMPLE = 1;
 	final int CV_COL_SAMPLE = 0;
+	String extension = "";
 
 	public MLRunner2(IHistogramProducer histoProducer, ITrack[][] trackArray,
 			int[][] dims, int compMethod, boolean dualHist) {
@@ -48,6 +50,15 @@ public class MLRunner2 {
 		this.histoProducer = histoProducer;
 
 		this.init(dims, trackArray, compMethod, dualHist);
+	}
+
+	public void finalize() {
+		for (Mat[] matsArr : this.labelsArr) {
+			for (Mat mat : matsArr) {
+				mat.release();
+				mat = null;
+			}
+		}
 	}
 
 	private void init(int[][] dims, ITrack[][] trackArray, int compMethod,
@@ -101,7 +112,18 @@ public class MLRunner2 {
 		exService.shutdown();
 	}
 
-	public void run(int modelType, String destFolder) {
+	public double run2(int modelType, String destFolder, String ext) {
+		this.extension = ext;
+		double val = this.run(modelType, destFolder, true);
+		this.extension = "";
+		return val;
+	}
+
+	public double run(int modelType, String destFolder) {
+		return this.run(modelType, destFolder, true);
+	}
+
+	public double run(int modelType, String destFolder, boolean write) {
 		// Set up labels
 
 		ExecutorService exService = Executors.newFixedThreadPool(8);
@@ -113,7 +135,7 @@ public class MLRunner2 {
 			futures.add(exService.submit(new Callable<double[]>() {
 				@Override
 				public double[] call() throws Exception {
-					// TODO Auto-generated method stub
+
 					double[] retVals = new double[3];
 					int count = 0;
 					for (int j = idx; j < idx2; j++) {
@@ -154,36 +176,47 @@ public class MLRunner2 {
 		}
 		exService.shutdown();
 
-		FileWriter fw = null;
-		String fileName = destFolder + File.separator + type.toUpperCase();
-		if (modelType == 1) {
-			fileName += "Bayseacc.csv";
-		} else if (modelType == 2) {
-			fileName += "SVMacc.csv";
-		} else if (modelType == 3) {
-			fileName += "Boostacc.csv";
-		}
-
-		try {
-			fw = new FileWriter(fileName);
-			for (int i = 0; i < accValues.size(); i++) {
-				fw.append(String.valueOf(accValues.get(i)));
-				fw.append("\n");
+		if (write) {
+			FileWriter fw = null;
+			String fileName = destFolder + File.separator + type.toUpperCase();
+			if (modelType == 1) {
+				fileName += "Bayseacc" + this.extension + ".csv";
+			} else if (modelType == 2) {
+				fileName += "SVMacc" + this.extension + ".csv";
+			} else if (modelType == 3) {
+				fileName += "Boostacc" + this.extension + ".csv";
 			}
-		} catch (Exception e) {
-			System.out.println("Error in CsvFileWriter !!!");
-			e.printStackTrace();
-		} finally {
-			if (fw != null) {
-				try {
-					fw.flush();
-					fw.close();
-				} catch (IOException e) {
-					e.printStackTrace();
+
+			try {
+				fw = new FileWriter(fileName);
+				for (int i = 0; i < accValues.size(); i++) {
+					fw.append(String.valueOf(accValues.get(i)));
+					fw.append("\n");
+				}
+			} catch (Exception e) {
+				System.out.println("Error in CsvFileWriter !!!");
+				e.printStackTrace();
+			} finally {
+				if (fw != null) {
+					try {
+						fw.flush();
+						fw.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 		}
+		
+		
+		double[] accArr = new double[accValues.size()];
+		for (int i = 0; i < accArr.length; i++) {
+			accArr[i] = accValues.get(i);
+		}
 
+		Mean meanCalc = new Mean();
+		double mean = meanCalc.evaluate(accArr);
+		return mean;
 	}
 
 	double calcModelAccuracy(Mat[] labels, CvStatModel model, int modelType) {
@@ -218,6 +251,8 @@ public class MLRunner2 {
 		}
 	}
 
+	// This causes null pointers when run with dualHists true. If
+	// this MLRunner is going to do that type, then this needs to be addressed.
 	private CvStatModel getModel(Mat[][] labelsArr, int leavOut, int modelType) {
 		ArrayList<Float> classLabels = new ArrayList<Float>();
 		ArrayList<Mat> dataList = new ArrayList<Mat>();
@@ -240,7 +275,7 @@ public class MLRunner2 {
 		for (int i = 0; i < labelArr.length; i++) {
 			Mat tmpMat = dataList.get(i);
 			for (int j = 0; j < tmpMat.rows(); j++)
-			dataMat.put(i, j, tmpMat.get(0, j));
+				dataMat.put(i, j, tmpMat.get(0, j));
 			labelArr[i] = classLabels.get(i);
 		}
 
@@ -249,16 +284,24 @@ public class MLRunner2 {
 		if (modelType == 1) {
 			CvNormalBayesClassifier classifier = new CvNormalBayesClassifier();
 			classifier.train(dataMat, labelMat);
+			dataMat.release();
+			dataMat = null;
 			return classifier;
 		} else if (modelType == 2) {
 			CvSVM classifier = new CvSVM();
 			classifier.train(dataMat, labelMat);
+			dataMat.release();
+			dataMat = null;
 			return classifier;
 		} else if (modelType == 3) {
 			CvBoost classifier = new CvBoost();
 			classifier.train(dataMat, CV_ROW_SAMPLE, labelMat);
+			dataMat.release();
+			dataMat = null;
 			return classifier;
 		} else {
+			dataMat.release();
+			dataMat = null;
 			return null;
 		}
 	}
@@ -339,6 +382,25 @@ public class MLRunner2 {
 					classLabels.add(diffLabel);
 
 					dataList.add(new float[] { (float) difVal1, (float) difVal2 });
+					absDiffMat1.release();
+					absDiffMat2.release();
+					absDiffMat3.release();
+					sameHist1.release();
+					sameHist2.release();
+					sameHist3.release();
+					sameHist4.release();
+					diffHist1.release();
+					diffHist2.release();
+
+					absDiffMat1 = null;
+					absDiffMat2 = null;
+					absDiffMat3 = null;
+					sameHist1 = null;
+					sameHist2 = null;
+					sameHist3 = null;
+					sameHist4 = null;
+					diffHist1 = null;
+					diffHist2 = null;
 					gcCount++;
 				}
 			}

@@ -26,5 +26,5 @@
 		<driverclass value="com.mysql.jdbc.Driver" />
 		<url value="jdbc:mysql://localhost:3306/trackingdata" />
 	</trackingpool>
-	<imagedbcache max="650000" />
+	<imagedbcache max="1000000" />
 </configfile>

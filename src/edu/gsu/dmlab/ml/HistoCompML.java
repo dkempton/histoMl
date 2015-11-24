@@ -35,7 +35,7 @@ public class HistoCompML {
 	public static void main(String[] args) {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		HistoCompML ml = new HistoCompML();
-		ml.run2();
+		ml.run();
 	}
 
 	public HistoCompML() {
@@ -67,23 +67,43 @@ public class HistoCompML {
 		String mainDestFolder = "C:\\Users\\Dustin\\Google Drive\\Lab Research\\Summer15\\Data\\";
 		ITrack[][] arTracks = TrackReader.getTracks(this.sourceFile, "AR");
 		ITrack[][] chTracks = TrackReader.getTracks(this.sourceFile, "CH");
+		// {
+		// String destFolder1 = mainDestFolder + "Best1";
+		// String destFolder2 = mainDestFolder + "Best2";
+		// this.runBest(destFolder1, arTracks, chTracks, false);
+		// //this.runBest(destFolder2, arTracks, chTracks, true);
+		// }
+		// {
+		// String destFolder1 = mainDestFolder + "Mid1";
+		// String destFolder2 = mainDestFolder + "Mid2";
+		// this.runMid(destFolder1, arTracks, chTracks, false);
+		// //this.runMid(destFolder2, arTracks, chTracks, true);
+		// }
+		// {
+		// String destFolder1 = mainDestFolder + "Worst1";
+		// String destFolder2 = mainDestFolder + "Worst2";
+		// this.runWorst(destFolder1, arTracks, chTracks, false);
+		// // this.runWorst(destFolder2, arTracks, chTracks, true);
+		// }
+
+		// {
+		// String destFolder1 = mainDestFolder + "TopK";
+		// this.runTopK(destFolder1, arTracks, chTracks, false);
+		// // this.runWorst(destFolder2, arTracks, chTracks, true);
+		// }
+
 		{
-			String destFolder1 = mainDestFolder + "Best1";
-			String destFolder2 = mainDestFolder + "Best2";
-			this.runBest(destFolder1, arTracks, chTracks, false);
-			this.runBest(destFolder2, arTracks, chTracks, true);
-		}
-		{
-			String destFolder1 = mainDestFolder + "Mid1";
-			String destFolder2 = mainDestFolder + "Mid2";
-			this.runMid(destFolder1, arTracks, chTracks, false);
-			this.runMid(destFolder2, arTracks, chTracks, true);
-		}
-		{
-			String destFolder1 = mainDestFolder + "Worst1";
-			String destFolder2 = mainDestFolder + "Worst2";
-			this.runWorst(destFolder1, arTracks, chTracks, false);
-			this.runWorst(destFolder2, arTracks, chTracks, true);
+			String destFolder = mainDestFolder + "TopK+";
+			{
+				SearchRunner runner = new SearchRunner(
+						this.trackingDBPoolSourc, this.histProd, arTracks);
+				runner.run(destFolder);
+			}
+			{
+				SearchRunner runner = new SearchRunner(
+						this.trackingDBPoolSourc, this.histProd, chTracks);
+				runner.run(destFolder);
+			}
 		}
 
 	}
@@ -93,7 +113,7 @@ public class HistoCompML {
 
 		// AR
 		{
-			int[][] dims = { {6, 3 }, { 6, 7 }, { 6, 9 }, { 6, 10 } };// AR
+			int[][] dims = { { 6, 3 }, { 6, 7 }, { 6, 9 }, { 6, 10 } };// AR
 			int histMeasure = 4;
 			MLRunner2 runner = new MLRunner2(this.histProd, arTracks, dims,
 					histMeasure, dualHist);
@@ -104,7 +124,7 @@ public class HistoCompML {
 		}
 		// CH
 		{
-			int[][] dims = { { 6, 2 }, { 6, 3 }, { 6, 6 },  { 6, 9 } };//CH
+			int[][] dims = { { 6, 2 }, { 6, 3 }, { 6, 6 }, { 6, 9 } };// CH
 
 			int histMeasure = 4;
 			MLRunner2 runner = new MLRunner2(this.histProd, chTracks, dims,
@@ -117,6 +137,51 @@ public class HistoCompML {
 
 	}
 
+	void runTopK(String destFolder, ITrack[][] arTracks, ITrack[][] chTracks,
+			boolean dualHist) {
+
+		// AR
+		{
+
+			int[][][] dimsArr = { { { 1, 6 }, { 7, 6 }, { 8, 2 }, { 9, 2 } },// With
+																				// 1
+					{ { 1, 6 }, { 6, 4 }, { 5, 3 }, { 5, 1 } },// With 2
+					{ { 8, 2 }, { 9, 3 }, { 8, 3 }, { 5, 2 } },// With 3
+					{ { 8, 3 }, { 5, 1 }, { 3, 2 }, { 7, 3 } } };// With 4
+
+			for (int i = 0; i < 4; i++) {
+				for (int histMeasure = 1; histMeasure < 5; histMeasure++) {
+					MLRunner2 runner = new MLRunner2(this.histProd, arTracks,
+							dimsArr[i], histMeasure, dualHist);
+					for (int modelType = 1; modelType < 4; modelType++) {
+						String ext = "" + (i + 1) + "_" + histMeasure;
+						runner.run2(modelType, destFolder, ext);
+					}
+				}
+			}
+		}
+		// CH
+		{
+			int[][][] dimsArr = { { { 7, 7 }, { 5, 2 }, { 2, 2 }, { 1, 2 } },// With
+					// 1
+					{ { 7, 6 }, { 1, 6 }, { 7, 7 }, { 2, 2 } },// With 2
+					{ { 8, 2 }, { 9, 2 }, { 9, 3 }, { 5, 2 } },// With 3
+					{ { 3, 3 }, { 3, 1 }, { 3, 2 }, { 2, 1 } } };// With 4
+			for (int i = 0; i < 4; i++) {
+				for (int histMeasure = 1; histMeasure < 5; histMeasure++) {
+
+					MLRunner2 runner = new MLRunner2(this.histProd, chTracks,
+							dimsArr[i], histMeasure, dualHist);
+					for (int modelType = 1; modelType < 4; modelType++) {
+						String ext = "" + (i + 1) + "_" + histMeasure;
+						runner.run2(modelType, destFolder, ext);
+					}
+				}
+			}
+		}
+
+	}
+
 	void runBest(String destFolder, ITrack[][] arTracks, ITrack[][] chTracks,
 			boolean dualHist) {
 
@@ -125,7 +190,7 @@ public class HistoCompML {
 			int[][] dims = { { 1, 6 }, { 3, 1 }, { 4, 1 }, { 7, 9 } };// Best//
 																		// 1//AR
 			int histMeasure = 1;
-			MLRunner runner = new MLRunner(this.histProd, arTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, arTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
@@ -136,7 +201,7 @@ public class HistoCompML {
 			int[][] dims = { { 1, 10 }, { 7, 7 }, { 9, 1 } };// 1//CH//Best
 
 			int histMeasure = 1;
-			MLRunner runner = new MLRunner(this.histProd, chTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, chTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
@@ -153,7 +218,7 @@ public class HistoCompML {
 			int[][] dims = { { 1, 7 }, { 4, 6 }, { 6, 6 }, { 8, 5 } };// 1//AR//Mid
 
 			int histMeasure = 1;
-			MLRunner runner = new MLRunner(this.histProd, arTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, arTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
@@ -164,7 +229,7 @@ public class HistoCompML {
 			int[][] dims = { { 1, 6 }, { 3, 5 }, { 7, 2 }, { 8, 4 } };// 3//CH//Mid
 
 			int histMeasure = 3;
-			MLRunner runner = new MLRunner(this.histProd, chTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, chTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
@@ -181,7 +246,7 @@ public class HistoCompML {
 			int[][] dims = { { 6, 8 } };// 2//Worst
 
 			int histMeasure = 2;
-			MLRunner runner = new MLRunner(this.histProd, arTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, arTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
@@ -192,7 +257,7 @@ public class HistoCompML {
 			int[][] dims = { { 3, 10 }, { 4, 10 }, { 8, 10 } };// 2//Worst
 
 			int histMeasure = 2;
-			MLRunner runner = new MLRunner(this.histProd, chTracks, dims,
+			MLRunner2 runner = new MLRunner2(this.histProd, chTracks, dims,
 					histMeasure, dualHist);
 			for (int modelType = 1; modelType < 4; modelType++) {
 				runner.run(modelType, destFolder);
