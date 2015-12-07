@@ -64,7 +64,7 @@ public class HistoCompML {
 	}
 
 	public void run() {
-		String mainDestFolder = "C:\\Users\\Dustin\\Google Drive\\Lab Research\\Summer15\\Data\\";
+		String mainDestFolder = "C:\\Users\\Dustin\\Google Drive\\Lab Research\\Summer15\\Data\\FinalVer\\";
 		ITrack[][] arTracks = TrackReader.getTracks(this.sourceFile, "AR");
 		ITrack[][] chTracks = TrackReader.getTracks(this.sourceFile, "CH");
 		// {
@@ -92,20 +92,29 @@ public class HistoCompML {
 		// // this.runWorst(destFolder2, arTracks, chTracks, true);
 		// }
 
-		{
-			String destFolder = mainDestFolder + "TopK+";
-			{
-				SearchRunner runner = new SearchRunner(
-						this.trackingDBPoolSourc, this.histProd, arTracks);
-				runner.run(destFolder);
-			}
-			{
-				SearchRunner runner = new SearchRunner(
-						this.trackingDBPoolSourc, this.histProd, chTracks);
-				runner.run(destFolder);
-			}
-		}
-
+		// {
+		// String destFolder = mainDestFolder + "TopKSep";
+		// // {
+		// // SearchRunnerSep runner = new SearchRunnerSep(
+		// // this.trackingDBPoolSourc, this.histProd, arTracks);
+		// // runner.run(destFolder);
+		// // }
+		// {
+		// SearchRunnerSep runner = new SearchRunnerSep(
+		// this.trackingDBPoolSourc, this.histProd, chTracks);
+		// runner.run(destFolder);
+		// }
+		// }
+		ResultWriter rw = new ResultWriter(mainDestFolder);
+		DbAccess dbAccess = new DbAccess(this.trackingDBPoolSourc,
+				this.histProd);
+		TopKSelection sel = new TopKSelection(chTracks, dbAccess, rw);
+		sel.run();
+		TopKSearch ser = new TopKSearch(chTracks, dbAccess, rw);
+		ser.run();
+		TopKRedundencyLimit topK = new TopKRedundencyLimit(chTracks, dbAccess,
+				rw);
+		topK.run();
 	}
 
 	void runCrossValSingle(String destFolder, ITrack[][] arTracks,

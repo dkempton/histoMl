@@ -14,13 +14,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-public class SearchRunner {
+public class SearchRunnerSep {
 	String type;
 	DataSource dsourc;
 	IHistogramProducer histoProducer;
 	ITrack[][] trackArray;
 
-	public SearchRunner(DataSource dsourc, IHistogramProducer histoProducer,
+	public SearchRunnerSep(DataSource dsourc, IHistogramProducer histoProducer,
 			ITrack[][] trackArray) {
 		this.type = trackArray[0][0].getFirst().getType();
 		this.dsourc = dsourc;
@@ -29,21 +29,22 @@ public class SearchRunner {
 	}
 
 	public void run(String destFolder) {
-
-		for (int compRank = 4; compRank < 5; compRank++) {
-			for (int compMeasure = 4; compMeasure < 5; compMeasure++) {
+		int compStart = 4;
+		for (int compRank = 1; compRank < 5; compRank++) {
+			for (int compMeasure = compStart; compMeasure < 5; compMeasure++) {
+				compStart = 1;
 				int[] skipVals = new int[0];
 				int dimCount = 1;
 				int[][] dims = this.query(skipVals, compRank, dimCount++);
-				MLRunner2 runner = new MLRunner2(this.histoProducer,
-						this.trackArray, dims, compMeasure, false);
+				MLRunnerSep runner = new MLRunnerSep(this.histoProducer,
+						this.trackArray, dims, compMeasure);
 				double accMean = runner.run(1, "", false);
 				System.out.println("Mean:" + accMean);
 				int leavIdx = 1;
 				while (dimCount < 5 && leavIdx < 15) {
 					int[][] dims2 = this.query(skipVals, compRank, dimCount);
-					MLRunner2 runner2 = new MLRunner2(this.histoProducer,
-							this.trackArray, dims2, compMeasure, false);
+					MLRunnerSep runner2 = new MLRunnerSep(this.histoProducer,
+							this.trackArray, dims2, compMeasure);
 					double tmpMean = runner2.run(1, "", false);
 					System.out.println("Mean:" + tmpMean);
 					if (tmpMean > accMean) {
